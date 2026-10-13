@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: fastapi_clean
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d fastapi_clean"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: ./apps/api
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file: ./apps/api/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:app@db:5432/fastapi_clean
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    build: ./apps/web
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      FASTAPI_URL: http://api:8000
+      WEB_ORIGIN: http://localhost:3000
+      COOKIE_SECURE: "false"
+    depends_on:
+      - api
+volumes:
+  postgres_data:
